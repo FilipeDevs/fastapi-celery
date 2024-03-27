@@ -10,10 +10,11 @@ services:
     volumes:
       - ./project:/usr/src/app
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://rabbitmq
+      - CELERY_RESULT_BACKEND=mongodb://mongodb:27017/
     depends_on:
-      - redis
+      - rabbitmq
+      - mongodb
 
   worker:
     build: ./project
@@ -21,24 +22,32 @@ services:
     volumes:
       - ./project:/usr/src/app
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://rabbitmq
+      - CELERY_RESULT_BACKEND=mongodb://mongodb:27017/
     depends_on:
       - web
-      - redis
+      - rabbitmq
+      - mongodb
 
-  redis:
-    image: redis:7
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  mongodb:
+    image: mongo
 
   dashboard:
     build: ./project
-    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    command: celery --broker=amqp://rabbitmq flower --port=5555
     ports:
       - 5556:5555
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://rabbitmq
+      - CELERY_RESULT_BACKEND=mongodb://mongodb:27017/
     depends_on:
       - web
-      - redis
+      - rabbitmq
+      - mongodb
       - worker
